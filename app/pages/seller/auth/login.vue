@@ -6,8 +6,8 @@
           <v-card-title>Seller Login</v-card-title>
           <v-card-text>
             <v-form ref="form" @submit.prevent="onSubmit">
-              <v-text-field v-model="identifier" label="Email or Phone" required />
-              <v-text-field v-model="password" label="Password" type="password" required />
+              <v-text-field v-model="identifier" label="Email or Phone" variant="outlined" aria-required="true" />
+              <v-text-field v-model="password" label="Password" type="password"  variant="outlined" aria-required="true" />
               <v-btn :loading="loading" color="primary" class="mt-4" @click="onSubmit">Login</v-btn>
             </v-form>
             <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>

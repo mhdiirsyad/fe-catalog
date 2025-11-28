@@ -3,45 +3,69 @@
     <v-card-title>Daftar Toko (3 langkah)</v-card-title>
 
     <v-card-text>
-      <VStepper v-model="step" show-actions>
-        <div class="d-flex align-center mb-4">
+      <VStepper v-model="step" show-actions class="mx-auto pa-4">
+        <div class="d-flex align-center justify-center mb-4">
           <v-chip v-for="(label, i) in ['Informasi Toko','Alamat PIC','Dokumen']" :key="i" :color="step === i+1 ? 'primary' : undefined" class="ma-1">
             {{ i+1 }}. {{ label }}
           </v-chip>
         </div>
 
-        <div v-if="step === 1">
-          <v-form ref="form1" lazy-validation>
-            <v-text-field v-model="form.nama_toko" label="Nama Toko" required />
-            <v-text-field v-model="form.deskripsi_singkat" label="Deskripsi Singkat" />
-            <v-text-field v-model="form.nama_pic" label="Nama Lengkap PIC" required />
-            <v-text-field v-model="form.no_hp_pic" label="No Handphone PIC" required />
-            <v-text-field v-model="form.email_pic" label="Email PIC" required />
-            <v-text-field v-model="form.password" label="Password" type="password" required />
+        <div v-if="step === 1" max-width="pa-4">
+          <v-form ref="form1" lazy-validation class="w-75 mx-auto">
+            <VTextField v-model="form.nama_toko" variant="outlined" label="Nama Toko" required />
+            <VTextField v-model="form.deskripsi_singkat" variant="outlined" label="Deskripsi Singkat" />
+            <VTextField v-model="form.nama_pic" variant="outlined" label="Nama Lengkap PIC" required />
+            <VTextField v-model="form.no_hp_pic" variant="outlined" label="No Handphone PIC" required />
+            <VTextField v-model="form.email_pic" variant="outlined" label="Email PIC" required />
+            <VTextField v-model="form.password" variant="outlined" label="Password" type="password" required />
           </v-form>
         </div>
 
         <div v-else-if="step === 2">
           <v-form ref="form2" lazy-validation>
-            <v-text-field v-model="form.alamat_pic" label="Alamat (Nama Jalan)" required />
+            <VSelect v-model="selectedProvince" 
+              :items="provinces" 
+              item-title="name" 
+              item-value="code" 
+              label="Propinsi" 
+              variant="outlined" 
+            />
+            <VSelect v-model="selectedCity" 
+              :items="cities" 
+              item-title="name" 
+              item-value="code" 
+              label="Kabupaten/Kota" 
+              variant="outlined" 
+            />
+            <VSelect v-model="selectedDistrict" 
+              :items="districts" 
+              item-title="name" 
+              item-value="code" 
+              label="Kecamatan" 
+              variant="outlined" 
+            />
+            <VSelect v-model="form.nama_kelurahan" 
+              :items="villages" 
+              item-title="name" 
+              item-value="code" 
+              label="Kelurahan" 
+              variant="outlined" 
+            />
             <v-row>
               <v-col cols="6">
-                <v-text-field v-model="form.rt" label="RT" required />
+                <VTextField v-model="form.rt" label="RT" variant="outlined" required />
               </v-col>
               <v-col cols="6">
-                <v-text-field v-model="form.rw" label="RW" required />
+                <VTextField v-model="form.rw" label="RW" variant="outlined" required />
               </v-col>
             </v-row>
-            <v-text-field v-model="form.nama_kelurahan" label="Kelurahan" required />
-            <v-text-field v-model="form.nama_kecamatan" label="Kecamatan" required />
-            <v-text-field v-model="form.kabupaten_kota" label="Kabupaten/Kota" required />
-            <v-text-field v-model="form.propinsi" label="Propinsi" required />
+            <VTextField v-model="form.alamat_pic" label="Alamat (Nama Jalan)" variant="outlined" required />
           </v-form>
         </div>
 
         <div v-else>
           <v-form ref="form3" lazy-validation>
-            <v-text-field v-model="form.no_ktp_pic" label="No. KTP (16 Digit)" counter="16" required />
+            <v-text-field v-model="form.no_ktp_pic" label="No. KTP (16 Digit)" variant="outlined" counter="16" required />
             <v-file-input v-model="files.ktp" label="Upload KTP (pdf/jpg)" accept="application/pdf,image/*" show-size />
             <v-file-input v-model="files.photo" label="Upload Foto Diri (jpg/png)" accept="image/*" show-size />
           </v-form>
@@ -69,14 +93,60 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import type { Region } from '~/types/region'
+import { useRuntimeConfig } from '#app'
 
 const step = ref<number>(1)
 const loading = ref<boolean>(false)
 const error = ref<string>('')
 const successMessage = ref<string>('')
 const router = useRouter()
+
+const selectedProvince = ref<string | null>(null)
+const selectedCity = ref<string | null>(null)
+const selectedDistrict = ref<string | null>(null)
+
+const provinces = ref<Region[]>([])
+const cities = ref<Region[]>([])
+const districts = ref<Region[]>([])
+const villages = ref<Region[]>([])
+
+const config = useRuntimeConfig()
+const apiBase = config.public?.apiBase ?? '/api'
+
+const fetchProvinces = async () => {
+  const response = await $fetch<{ data: Region[] }>(`${apiBase}/api/region/provinces`)
+  provinces.value = response.data
+  console.log('fetched provinces:', provinces.value)
+}
+
+watch(selectedProvince, async (newCode) => {
+  selectedCity.value = null
+  cities.value = []
+  if (newCode) {
+    const res = await $fetch<{ data: Region[] }>(`${apiBase}/api/region/cities/${newCode}`)
+    cities.value = res.data
+  }
+})
+
+watch(selectedCity, async (newCode) => {
+  selectedDistrict.value = null
+  districts.value = []
+  if (newCode) {
+    const res = await $fetch<{ data: Region[] }>(`${apiBase}/api/region/districts/${newCode}`)
+    districts.value = res.data
+  }
+})
+
+watch(selectedDistrict, async (newCode) => {
+  villages.value = []
+  if (newCode) {
+    const res = await $fetch<{ data: Region[] }>(`${apiBase}/api/region/villages/${newCode}`)
+    villages.value = res.data
+  }
+})
 
 // Form Data menggunakan Key Bahasa Indonesia (Sesuai Backend)
 const form = reactive<Record<string, string>>({
@@ -120,7 +190,10 @@ async function submit() {
     const body = new FormData()
     
     // Append semua text field otomatis
-    for (const [k, v] of Object.entries(form)) {
+    for (const [k, v] of Object.entries({
+        ...form, propinsi: selectedProvince.value || '', 
+        kabupaten_kota: selectedCity.value || '', 
+        nama_kecamatan: selectedDistrict.value || ''})) {
       body.append(k, v == null ? '' : String(v))
     }
 
@@ -156,4 +229,9 @@ async function submit() {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  fetchProvinces()
+  console.log(provinces.value)
+})
 </script>
