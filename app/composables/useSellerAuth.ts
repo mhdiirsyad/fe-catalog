@@ -1,4 +1,6 @@
 export function useSellerAuth() {
+  const config = useRuntimeConfig()
+  const apiBase = config.public?.apiBase ?? '/api'
   const tokenState = useState<string | null>('seller_token', () => {
     if (process.client) return localStorage.getItem('seller_token')
     return null
@@ -14,7 +16,7 @@ export function useSellerAuth() {
       password,
       device_name: device,
     }
-    const res = await $fetch('/api/seller/login', {
+    const res = await $fetch(`${apiBase}/api/seller/login`, {
       method: 'POST',
       body,
       headers: { Accept: 'application/json' },
@@ -32,7 +34,7 @@ export function useSellerAuth() {
     const t = tokenState.value
     if (!t) return
     try {
-      await $fetch('/api/seller/logout', {
+      await $fetch(`${apiBase}/api/seller/logout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${t}`, Accept: 'application/json' },
       })
